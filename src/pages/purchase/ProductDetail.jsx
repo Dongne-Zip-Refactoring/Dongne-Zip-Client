@@ -22,7 +22,9 @@ export default function ProductDetail() {
 
   const { id } = useParams();
   const dispatch = useDispatch();
-
+  const [liked, setLiked] = useState(false); // 현재 찜 상태 (true/false)
+  const [likeCount, setLikeCount] = useState(0); // 찜 개수
+  const [loadingLike, setLoadingLike] = useState(false); // 좋아요 요청 중복 방지 로딩
   const [userId, setUserId] = useState(null);
   const [userNick, setUserNick] = useState(null);
 
@@ -40,7 +42,13 @@ export default function ProductDetail() {
       try {
         const response = await axios.get(`${API}/item/${id}`);
         console.log('상품상세 조회', response.data.data);
-        setProduct(response.data.data);
+        const productData = response.data.data; // API 응답 데이터를 변수에 저장
+
+        setProduct(productData); // product 상태 설정
+
+        // productData 변수를 사용해서 찜하기 상태 설정
+        setLiked(productData.isFavorite);
+        setLikeCount(productData.favCount);
       } catch (err) {
         setError('상품 정보를 불러오는 중 오류가 발생했습니다.');
       } finally {
@@ -163,6 +171,44 @@ export default function ProductDetail() {
     }
   };
 
+  const handleLikeClick = async () => {
+    if (loadingLike) return; // 중복 요청 방지
+
+    // 로그인 확인 (userId 상태는 이미 파일에 있습니다)
+    if (!userId) {
+      alert('로그인이 필요합니다.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      setLoadingLike(true);
+
+      // 백엔드에 '토글' 요청 보내기
+      const res = await axios.post(
+        `${API}/item/${id}/favorite`, // id는 useParams에서 가져온 상품 id입니다.
+        {},
+        { withCredentials: true },
+      );
+
+      if (res.data.success) {
+        // 서버가 알려준 최종 결과로 화면 상태 업데이트
+        const newLikedState = res.data.isFavorite;
+        setLiked(newLikedState);
+        setLikeCount((prevCount) =>
+          newLikedState ? prevCount + 1 : prevCount - 1,
+        );
+      } else {
+        throw new Error(res.data.message);
+      }
+    } catch (error) {
+      console.error('좋아요 처리 중 오류:', error);
+      alert('오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setLoadingLike(false);
+    }
+  };
+
   return (
     <S.MainLayout>
       <BreadcrumbContainer>
@@ -251,7 +297,9 @@ export default function ProductDetail() {
           {/* 버튼 영역 */}
           <ButtonWrapper>
             <ChatButton onClick={handleChatData}>채팅하기</ChatButton>
-            <FavoriteButton>찜하기</FavoriteButton>
+            <FavoriteButton onClick={handleLikeClick} disabled={loadingLike}>
+              {liked ? '찜 취소' : '찜하기'} ({likeCount})
+            </FavoriteButton>
           </ButtonWrapper>
 
           {/* 거래 상태 표시 (판매자 본인만 클릭 가능) */}

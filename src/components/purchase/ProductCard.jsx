@@ -34,47 +34,42 @@ export default function ProductCard({ product }) {
   // 좋아요 버튼
   const handleLikeClick = async (e) => {
     e.preventDefault(); // 부모 요소 링크 이동 방지
-
     if (loading) return; // 중복 요청 방지
 
-    // 로그인 유저인지 확인
     try {
       setLoading(true);
 
+      // 로그인 확인 로직은 그대로 유지합니다. (좋은 코드입니다)
       const loginRes = await axios.post(
         `${API}/user/token`,
         {},
         { withCredentials: true },
       );
 
-      console.log('유저 있어???:', loginRes.data.id);
-
       if (!loginRes.data.id) {
         setIsLoginModalOpen(true);
+        setLoading(false); // 로딩 상태 해제
         return;
       }
 
-      const newLikedState = !liked;
+      // 1. 새로운 '토글' API 주소로 POST 요청 하나만 보냅니다.
+      const res = await axios.post(`${API}/item/${product.id}/favorite`);
 
-      if (newLikedState) {
-        // 좋아요 추가
-        const res = await axios.post(`${API}/item/favorites`, {
-          itemId: product.id,
-        });
-
-        if (!res.data.success) throw new Error(res.data.message);
+      // 2. 서버가 알려준 최종 결과(isFavorite)로 화면 상태를 업데이트합니다.
+      if (res.data.success) {
+        const newLikedState = res.data.isFavorite;
+        setLiked(newLikedState);
+        // 찜 개수도 서버 응답을 기반으로 업데이트 할 수 있습니다. (더 정확한 방법)
+        // 예: setLikeCount(res.data.favCount);
+        // 지금은 이전처럼 증감 방식으로 처리하겠습니다.
+        setLikeCount((prev) => (newLikedState ? prev + 1 : prev - 1));
       } else {
-        // 좋아요 취소
-        const res = await axios.delete(`${API}/item/favorites/${product.id}`);
-
-        if (!res.data.success) throw new Error(res.data.message);
+        // 서버가 success: false를 반환한 경우 (예: 예외 처리)
+        throw new Error(res.data.message);
       }
-
-      // 서버 요청 성공 시 상태 업데이트
-      setLiked(newLikedState);
-      setLikeCount((prev) => (newLikedState ? prev + 1 : prev - 1));
     } catch (error) {
       console.error('좋아요 처리 중 오류:', error);
+      // 여기에 사용자에게 오류를 알려주는 UI 로직 추가 가능 (예: alert)
     } finally {
       setLoading(false);
     }
