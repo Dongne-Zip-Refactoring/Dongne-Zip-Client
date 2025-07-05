@@ -1,7 +1,8 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import * as S from '../../styles/HeaderStyle';
 import { useActiveNav } from '../../hooks/common/useActiveNav';
 import { useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMagnifyingGlass } from '@fortawesome/free-solid-svg-icons';
 import axios from 'axios';
@@ -13,37 +14,13 @@ axios.defaults.withCredentials = true; // 모든 요청에 쿠키 포함
 export default function Header() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [hoveredMenu, setHoveredMenu] = useState(null);
-  const [userInfo, setUserInfo] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const API = process.env.REACT_APP_API_SERVER;
-  const location = useLocation(); // 현재 경로 감지
-
-  // 경로 변경 시마다 사용자 정보를 새로 요청 (로그인 후, 마이페이지 이동 시 업데이트)
-  useEffect(() => {
-    const fetchUserInfo = async () => {
-      try {
-        const response = await axios.post(`${API}/user/token`);
-        // 서버에서 반환하는 값이 { result: true, nickname: '사용자이름' }인 경우
-        if (response.data.result) {
-          setUserInfo({ nickname: response.data.nickname });
-          setIsLoggedIn(true);
-        } else {
-          setUserInfo(null);
-          setIsLoggedIn(false);
-        }
-      } catch (error) {
-        console.error('사용자 정보를 불러오지 못했습니다.', error);
-        setUserInfo(null);
-        setIsLoggedIn(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserInfo();
-  }, [API, location]); // location이 바뀔 때마다 재호출
+  // 1. isLogin 리듀서에서 로그인 상태와 유저 정보를 가져옵니다.
+  const { user, isLoggedIn } = useSelector((state) => state.isLogin);
+  // 2. notifications 리듀서에서 알림 개수를 가져옵니다.
+  const notificationCount = useSelector(
+    (state) => state.notifications?.count || 0,
+  );
 
   const toggleMobileNav = () => {
     setIsMobileNavOpen((prev) => !prev);
@@ -94,16 +71,21 @@ export default function Header() {
       <S.UtilContainer>
         <S.Icon>
           <span className="material-symbols-outlined">notifications</span>
+          {/* notificationCount가 0보다 크면 뱃지를 표시합니다. */}
+          {notificationCount > 0 && (
+            <S.NotificationBadge>{notificationCount}</S.NotificationBadge>
+          )}
         </S.Icon>
         <S.Icon>
           <span className="material-symbols-outlined">dark_mode</span>
         </S.Icon>
 
         {/* 로딩 상태일 때는 버튼을 숨기거나, 로딩 스피너를 표시 */}
-        {isLoading ? null : isLoggedIn ? (
+        {isLoggedIn ? (
           <Link to={'/mypage'}>
             <S.Button>
-              {userInfo?.nickname ? `${userInfo.nickname}님` : '마이페이지'}
+              {/* Redux에서 가져온 user 객체를 사용합니다. */}
+              {user?.nickname ? `${user.nickname}님` : '마이페이지'}
             </S.Button>
           </Link>
         ) : (
@@ -159,7 +141,7 @@ export default function Header() {
 
         {/* 로그인, 회원가입 버튼 (하단 고정) */}
         <S.AuthButtonWrapper>
-          {isLoading ? null : !isLoggedIn ? (
+          {!isLoggedIn ? (
             <>
               <S.LoginButton onClick={toggleMobileNav}>
                 <Link to={'/login'}>로그인</Link>

@@ -88,8 +88,21 @@ export const UtilContainer = styled.div`
 //--------------- Icons ---------------
 
 export const Icon = styled.div`
+  position: relative;
   height: 24px;
   width: 24px;
+`;
+
+export const NotificationBadge = styled.span`
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: red;
+  color: white;
+  border-radius: 50%;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: bold;
 `;
 
 //--------------- Button ---------------

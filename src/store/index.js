@@ -4,6 +4,7 @@ import saleReducer from './modules/saleReducer';
 import { loginReducer } from './modules/loginReducer';
 import mapReducer from './modules/mapReducer';
 import chatReducer from './modules/chatReducer';
+import notificationReducer from './modules/notificationReducer';
 
 const store = configureStore({
   reducer: {
@@ -11,6 +12,7 @@ const store = configureStore({
     isLogin: loginReducer,
     map: mapReducer,
     chat: chatReducer,
+    notifications: notificationReducer,
   },
 });
 
